@@ -18,7 +18,7 @@ client = openai.OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
-datapath = r"csv\culture_embedding.csv" 
+datapath = r"csv\culture_embedding.csv"
 df = pd.read_csv(datapath, index_col=0)
 df['embedding'] = df['embedding'].apply(ast.literal_eval)
 
@@ -46,12 +46,12 @@ def get_embedding(text):
     )
     return response.data[0].embedding
 
-def cos_sim(A,B):
-    return dot(A, B) / (norm(A)*norm(B))
+def cos_sim(A, B):
+    return dot(A, B) / (norm(A) * norm(B))
 
 def return_answer_candidate(df, query):
     query_embedding = get_embedding(query)
-    df['similarity'] = df.embedding.apply(lambda x: cos_sim(np.array(x),np.array(query_embedding)))
+    df['similarity'] = df.embedding.apply(lambda x: cos_sim(np.array(x), np.array(query_embedding)))
     top_three_doc = df.sort_values("similarity", ascending=False).head(5)
     return top_three_doc
 
@@ -60,6 +60,7 @@ def create_prompt(df, query):
     system_role = f"""You are an AI language model that answers questions
     And you answer documents about open subjects
     You must import the specified document and return the contents of the document in the query language
+    과목명 / 학수번호 / 분반 / 학점 / 담당교수 / 강의시간 / 종류 / 영역 Answer in the same format.
     The subject name must be included in the answer.
     Here are the document: 
             doc 1 :{str(result.iloc[0])}
@@ -74,7 +75,7 @@ def create_prompt(df, query):
     messages = [
         {"role": "system", "content": system_role},
         {"role": "user", "content": user_content}
-    ] 
+    ]
     return messages
 
 def generate_response(messages):
@@ -84,6 +85,31 @@ def generate_response(messages):
         temperature=0.5,
         max_tokens=500)
     return result.choices[0].message.content
+
+def parse_response(response):
+    try:
+        # 챗봇 응답을 파싱하여 JSON 형식으로 변환
+        if '/' in response:
+            parsed_elements = response.split(' / ')
+        else:
+            parsed_elements = response.split(', ')
+        response_dict = {
+            "과목명": parsed_elements[0].strip(),
+            "학수번호": parsed_elements[1].strip(),
+            "분반": parsed_elements[2].strip(),
+            "학점": parsed_elements[3].strip(),
+            "담당교수": parsed_elements[4].strip(),
+            "강의시간": parsed_elements[5].strip(),
+            "종류": parsed_elements[6].strip()
+        }
+        # '영역' 요소가 존재할 경우 추가
+        if len(parsed_elements) == 8:
+            response_dict["영역"] = parsed_elements[7].strip()
+
+        return response_dict
+    except IndexError:
+        # 오류 발생 시 response 내용을 반환
+        return {"error": "Parsing error", "response": response}
 
 @csrf_exempt
 def send_query(request):
@@ -96,9 +122,12 @@ def send_query(request):
             prompt = create_prompt(df, query)
             # generate_response 함수를 사용하여 챗봇 답변 생성
             chatbot_response = generate_response(prompt)
-            
-            # 생성된 챗봇 답변을 JSON 형식으로 응답
-            return JsonResponse({"response": chatbot_response})
+
+            # 챗봇 응답을 파싱하여 JSON 형식으로 변환
+            parsed_response = parse_response(chatbot_response)
+
+            # 생성된 JSON 응답을 반환
+            return JsonResponse(parsed_response, safe=False)
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
         except Exception as e:
