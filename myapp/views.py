@@ -88,7 +88,6 @@ def generate_response(messages):
 
 def parse_response(response):
     try:
-        # 챗봇 응답을 파싱하여 JSON 형식으로 변환
         if '/' in response:
             parsed_elements = response.split(' / ')
         else:
@@ -102,35 +101,27 @@ def parse_response(response):
             "강의시간": parsed_elements[5].strip(),
             "종류": parsed_elements[6].strip()
         }
-        # '영역' 요소가 존재할 경우 추가
         if len(parsed_elements) == 8:
             response_dict["영역"] = parsed_elements[7].strip()
 
         return response_dict
     except IndexError:
-        # 오류 발생 시 response 내용을 반환
         return {"error": "Parsing error", "response": response}
 
 @csrf_exempt
 def send_query(request):
     if request.method == 'POST':
         try:
-            body = json.loads(request.body)
-            query = body.get('query')
+            data = json.loads(request.body)
+            print("Received data:", data)
+            query = data.get('query', '').strip()
+            print("Query: ", query)
 
-            # create_prompt 함수를 사용하여 프롬프트 생성
-            prompt = create_prompt(df, query)
-            # generate_response 함수를 사용하여 챗봇 답변 생성
-            chatbot_response = generate_response(prompt)
-
-            # 챗봇 응답을 파싱하여 JSON 형식으로 변환
-            parsed_response = parse_response(chatbot_response)
-
-            # 생성된 JSON 응답을 반환
-            return JsonResponse(parsed_response, safe=False)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        return JsonResponse({"error": "Invalid request method"}, status=400)
+            messages = create_prompt(df, query)
+            response = generate_response(messages)
+            response_dict = parse_response(response)
+            return JsonResponse(response_dict, json_dumps_params={'ensure_ascii': False})
+        except json.JSONDecodeError as e:
+            print("JSON decode error:", str(e))
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
