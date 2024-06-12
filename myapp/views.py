@@ -9,9 +9,6 @@ from numpy.linalg import norm
 import ast
 import openai
 from dotenv import load_dotenv
-import requests
-import streamlit as st
-from streamlit_chat import message
 
 load_dotenv()
 client = openai.OpenAI(
@@ -124,4 +121,7 @@ def send_query(request):
         except json.JSONDecodeError as e:
             print("JSON decode error:", str(e))
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    elif request.method == 'GET':
+        print("hi")
+        return JsonResponse({'message': 'hi'})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
