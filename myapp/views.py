@@ -18,7 +18,8 @@ client = openai.OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
-datapath = r"csv\culture_embedding.csv"
+
+datapath = r"csv/culture_embedding.csv"
 df = pd.read_csv(datapath, index_col=0)
 df['embedding'] = df['embedding'].apply(ast.literal_eval)
 
@@ -124,4 +125,7 @@ def send_query(request):
         except json.JSONDecodeError as e:
             print("JSON decode error:", str(e))
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    elif request.method == 'GET':
+        print("hi")
+        return JsonResponse({'message': 'hi'})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
