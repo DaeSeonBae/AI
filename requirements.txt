@@ -1,0 +1,7 @@
+django
+pandas
+openai
+python-dotenv
+requests
+streamlit
+streamlit_chat

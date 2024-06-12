@@ -15,7 +15,8 @@ client = openai.OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
-datapath = r"csv\culture_embedding.csv"
+
+datapath = r"csv/culture_embedding.csv"
 df = pd.read_csv(datapath, index_col=0)
 df['embedding'] = df['embedding'].apply(ast.literal_eval)
 
